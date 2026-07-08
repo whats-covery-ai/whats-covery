@@ -1,0 +1,99 @@
+# To get started with Dependabot version updates, you'll need to specify which
+# package ecosystems to update and where the package manifests are located.
+# Please see the documentation for all configuration options:
+# https://docs.github.com/code-security/dependabot/dependabot-version-updates/configuration-options-for-the-dependabot.yml-file
+
+# To get started with Dependabot version updates, you'll need to specify which
+# package ecosystems to update and where the package manifests are located.
+# Please see the documentation for all configuration options:
+# https://docs.github.com/code-security/dependabot/dependabot-version-updates/configuration-options-for-the-dependabot.yml-file
+
+version: 2
+updates:
+  # React/Vite/Tailwind app dependencies
+  - package-ecosystem: "npm"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 5
+    labels:
+      - "dependencies"
+      - "javascript"
+    groups:
+      dev-dependencies:
+        dependency-type: "development"
+      production-dependencies:
+        dependency-type: "production"
+
+  # GitHub Actions workflows (ci.yml, codeql.yml, deploy.yml)
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    labels:
+      - "dependencies"
+      - "ci"
+
+  # Dev container base image
+  - package-ecosystem: "devcontainers"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    labels:
+      - "dependencies"
+      - "devcontainer"
+
+
+name: Dependabot Auto-Merge
+
+on:
+  pull_request_target:
+    branches: [ main ]
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  auto-merge:
+    runs-on: ubuntu-latest
+    if: github.actor == 'dependabot[bot]'
+    steps:
+      - name: Fetch Dependabot metadata
+        id: metadata
+        uses: dependabot/fetch-metadata@v2
+        with:
+          github-token: "${{ secrets.GITHUB_TOKEN }}"
+
+      - name: Wait for CI checks to pass
+        uses: fountainhead/action-wait-for-check@v1.2.0
+        id: wait-for-ci
+        with:
+          token: "${{ secrets.GITHUB_TOKEN }}"
+          checkName: "build"
+          ref: "${{ github.event.pull_request.head.sha }}"
+          timeoutSeconds: 600
+          intervalSeconds: 15
+
+      - name: Auto-approve and merge (patch/minor only)
+        if: |
+          steps.wait-for-ci.outputs.conclusion == 'success' &&
+          (steps.metadata.outputs.update-type == 'version-update:semver-patch' ||
+           steps.metadata.outputs.update-type == 'version-update:semver-minor')
+        run: |
+          gh pr review --approve "$PR_URL"
+          gh pr merge --auto --squash "$PR_URL"
+        env:
+          PR_URL: "${{ github.event.pull_request.html_url }}"
+          GITHUB_TOKEN: "${{ secrets.GITHUB_TOKEN }}"
+
+
+
+
+
+
+
+
+
+
+      
